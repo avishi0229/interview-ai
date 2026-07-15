@@ -1,0 +1,25 @@
+.button {
+
+    border: none;
+    outline: none;
+    padding-inline: 1.5rem;
+    padding-block: 0.75rem;
+    border-radius: 0.625rem;
+    cursor: pointer;
+
+    transition: background-color 0.2s ease, transform 0.15s ease;
+
+    &.primary-button {
+        background-color: #0F766E;
+        color: #FFFFFF;
+        font-weight: 600;
+
+        &:hover {
+            background-color: #115E59;
+        }
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+}
