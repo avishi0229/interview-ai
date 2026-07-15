@@ -3,6 +3,13 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const tokenBlacklistModel = require("../models/blacklist.model")
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+}
+
 /**
  * @name registerUserController
  * @description register a new user, expects username, email and password in the request body
@@ -19,7 +26,7 @@ async function registerUserController(req, res) {
     }
 
     const isUserAlreadyExists = await userModel.findOne({
-        $or: [ { username }, { email } ]
+        $or: [{ username }, { email }]
     })
 
     if (isUserAlreadyExists) {
@@ -42,8 +49,7 @@ async function registerUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token)
-
+    res.cookie("token", token, cookieOptions)
 
     res.status(201).json({
         message: "User registered successfully",
@@ -53,7 +59,6 @@ async function registerUserController(req, res) {
             email: user.email
         }
     })
-
 }
 
 
@@ -88,9 +93,10 @@ async function loginUserController(req, res) {
         { expiresIn: "1d" }
     )
 
-    res.cookie("token", token)
+    res.cookie("token", token, cookieOptions)
+
     res.status(200).json({
-        message: "User loggedIn successfully.",
+        message: "User logged in successfully.",
         user: {
             id: user._id,
             username: user.username,
@@ -103,32 +109,32 @@ async function loginUserController(req, res) {
 /**
  * @name logoutUserController
  * @description clear token from user cookie and add the token in blacklist
- * @access public
+ * @access Public
  */
 async function logoutUserController(req, res) {
+
     const token = req.cookies.token
 
     if (token) {
         await tokenBlacklistModel.create({ token })
     }
 
-    res.clearCookie("token")
+    res.clearCookie("token", cookieOptions)
 
     res.status(200).json({
         message: "User logged out successfully"
     })
 }
 
+
 /**
  * @name getMeController
  * @description get the current logged in user details.
- * @access private
+ * @access Private
  */
 async function getMeController(req, res) {
 
     const user = await userModel.findById(req.user.id)
-
-
 
     res.status(200).json({
         message: "User details fetched successfully",
@@ -140,8 +146,6 @@ async function getMeController(req, res) {
     })
 
 }
-
-
 
 module.exports = {
     registerUserController,
