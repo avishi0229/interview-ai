@@ -137,29 +137,6 @@ Open **http://localhost:5173** in your browser.
 
 > Resume uploads are size-limited for a smooth local experience, and CORS is configured with credentials enabled for local dev.
 
-## 🗺️ Roadmap
 
-- [ ] Deploy live demo
-- [ ] Add mock interview mode with voice input
-- [ ] Support multiple resume versions per user
-- [ ] Export prep roadmap as a calendar (.ics)
-
-## 🤝 Contributing
-
-Contributions are welcome. Please open an issue first to discuss what you'd like to change, or submit a PR directly for small fixes.
-
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit your changes
-4. Open a pull request
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for details.
-
-## 👤 Author
-
-**Your Name**
-[GitHub](#) · [LinkedIn](#) · [Portfolio](#)
 
 </div>
