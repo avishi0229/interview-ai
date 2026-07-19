@@ -1,11 +1,20 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const puppeteer = require("puppeteer")
+const puppeteerCore = require("puppeteer-core")
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY
 })
+
+const PDF_LAUNCH_ARGS = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--font-render-hinting=none"
+]
 
 
 const interviewReportSchema = z.object({
@@ -126,45 +135,92 @@ function wrapOnePageResumeHtml(htmlContent) {
 </html>`
 }
 
-async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch({
+async function launchPdfBrowser() {
+    const customExecutablePath =
+        process.env.CHROMIUM_PATH ||
+        process.env.PUPPETEER_EXECUTABLE_PATH
+
+    if (customExecutablePath) {
+        return puppeteerCore.launch({
+            headless: true,
+            executablePath: customExecutablePath,
+            args: PDF_LAUNCH_ARGS
+        })
+    }
+
+    const isProduction = process.env.NODE_ENV === "production"
+
+    if (isProduction) {
+        const chromium = require("@sparticuz/chromium")
+        chromium.setGraphicsMode = false
+
+        return puppeteerCore.launch({
+            args: [ ...chromium.args, ...PDF_LAUNCH_ARGS ],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless
+        })
+    }
+
+    let puppeteer
+    try {
+        puppeteer = require("puppeteer")
+    } catch {
+        throw new Error(
+            "PDF generation requires Chromium. Install dev dependencies locally or set CHROMIUM_PATH in production."
+        )
+    }
+
+    return puppeteer.launch({
         headless: true,
-        args: [ "--no-sandbox", "--disable-setuid-sandbox" ]
+        args: PDF_LAUNCH_ARGS
     })
-    const page = await browser.newPage()
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 })
-    await page.setContent(wrapOnePageResumeHtml(htmlContent), { waitUntil: "networkidle0" })
+}
 
-    // Shrink content so everything fits on a single A4 page
-    await page.evaluate(() => {
-        const root = document.getElementById("resume-page")
-        const inner = document.getElementById("resume-scale-inner")
-        if (!root || !inner) return
+async function generatePdfFromHtml(htmlContent) {
+    let browser
 
-        const availableHeight = root.clientHeight
-        const contentHeight = inner.scrollHeight
-        if (contentHeight <= availableHeight) return
+    try {
+        browser = await launchPdfBrowser()
+        const page = await browser.newPage()
+        await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 })
+        await page.setContent(wrapOnePageResumeHtml(htmlContent), { waitUntil: "load" })
 
-        const scale = Math.max(0.55, (availableHeight / contentHeight) * 0.96)
-        inner.style.transform = `scale(${scale})`
-        inner.style.width = `${100 / scale}%`
-    })
+        // Shrink content so everything fits on a single A4 page
+        await page.evaluate(() => {
+            const root = document.getElementById("resume-page")
+            const inner = document.getElementById("resume-scale-inner")
+            if (!root || !inner) return
 
-    const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        pageRanges: "1",
-        margin: {
-            top: "0mm",
-            bottom: "0mm",
-            left: "0mm",
-            right: "0mm"
+            const availableHeight = root.clientHeight
+            const contentHeight = inner.scrollHeight
+            if (contentHeight <= availableHeight) return
+
+            const scale = Math.max(0.55, (availableHeight / contentHeight) * 0.96)
+            inner.style.transform = `scale(${scale})`
+            inner.style.width = `${100 / scale}%`
+        })
+
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true,
+            pageRanges: "1",
+            margin: {
+                top: "0mm",
+                bottom: "0mm",
+                left: "0mm",
+                right: "0mm"
+            }
+        })
+
+        return pdfBuffer
+    } catch (error) {
+        throw new Error(`PDF generation failed: ${error.message || error}`)
+    } finally {
+        if (browser) {
+            await browser.close().catch(() => {})
         }
-    })
-
-    await browser.close()
-
-    return pdfBuffer
+    }
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
