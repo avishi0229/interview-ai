@@ -12,8 +12,7 @@ Upload a resume (or describe yourself), paste a job description, and get a perso
 [![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
-[Live Demo](#) · [Report Bug](#) · [Request Feature](#)
-
+[Live Demo](interview-ai-mu-eight.vercel.app) 
 </div>
 
 ---
